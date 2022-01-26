@@ -146,6 +146,9 @@ public class DefaultTransformUpstreamDependenciesResolver implements TransformUp
     private static void collectDependenciesIdentifiers(Set<ComponentIdentifier> dependenciesIdentifiers, Class<? extends ComponentIdentifier> type, Set<ComponentIdentifier> visited, Set<? extends DependencyResult> dependencies) {
         for (DependencyResult dependency : dependencies) {
             if (dependency instanceof ResolvedDependencyResult) {
+                if (dependency.isConstraint()) {
+                    continue; // ignore constraints
+                }
                 ResolvedDependencyResult resolvedDependency = (ResolvedDependencyResult) dependency;
                 ResolvedComponentResult selected = resolvedDependency.getSelected();
                 if (type.isInstance(selected.getId())) {

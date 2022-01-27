@@ -19,17 +19,15 @@ import configurations.TestPerformanceTest
 import projects.DEFAULT_FUNCTIONAL_TEST_BUCKET_SIZE
 import projects.DEFAULT_LINUX_FUNCTIONAL_TEST_BUCKET_SIZE
 
-enum class StageNames(override val stageName: String, override val description: String) : StageName {
-    QUICK_FEEDBACK_LINUX_ONLY("Quick Feedback - Linux Only", "Run checks and functional tests (embedded executer, Linux)"),
-    QUICK_FEEDBACK("Quick Feedback", "Run checks and functional tests (embedded executer, Windows)"),
-    READY_FOR_MERGE("Pull Request Feedback", "Run vairous functional tests against distribution") {
-        override val id: String = "ReadyforMerge"
-    },
-    READY_FOR_NIGHTLY("Ready for Nightly", "Rerun tests in different environments / 3rd party components"),
-    READY_FOR_RELEASE("Ready for Release", "Once a day: Rerun tests in more environments"),
-    HISTORICAL_PERFORMANCE("Historical Performance", "Once a week: Run performance tests for multiple Gradle versions"),
-    EXPERIMENTAL_VFS_RETENTION("Experimental FS Watching", "On demand checks to run tests with file system watching enabled"),
-    EXPERIMENTAL_PERFORMANCE("Experimental Performance", "Try out new performance test running")
+enum class StageNames(override val stageName: String, override val description: String, override val uuid: String) : StageName {
+    QUICK_FEEDBACK_LINUX_ONLY("Quick Feedback - Linux Only", "Run checks and functional tests (embedded executer, Linux)", "QuickFeedbackLinuxOnly"),
+    QUICK_FEEDBACK("Quick Feedback", "Run checks and functional tests (embedded executer, Windows)", "QuickFeedback"),
+    PULL_REQUEST_FEEDBACK("Pull Request Feedback", "Run various functional tests", "PullRequestFeedback"),
+    READY_FOR_NIGHTLY("Ready for Nightly", "Rerun tests in different environments / 3rd party components", "ReadyforNightly"),
+    READY_FOR_RELEASE("Ready for Release", "Once a day: Rerun tests in more environments", "ReadyforRelease"),
+    HISTORICAL_PERFORMANCE("Historical Performance", "Once a week: Run performance tests for multiple Gradle versions", "HistoricalPerformance"),
+    EXPERIMENTAL_VFS_RETENTION("Experimental FS Watching", "On demand checks to run tests with file system watching enabled", "ExperimentalVfsRetention"),
+    EXPERIMENTAL_PERFORMANCE("Experimental Performance", "Try out new performance test running", "ExperimentalPerformance")
 }
 
 private val performanceRegressionTestCoverages = listOf(
@@ -66,7 +64,7 @@ data class CIBuildModel(
             dependsOnSanityCheck = true
         ),
         Stage(
-            StageNames.READY_FOR_MERGE,
+            StageNames.PULL_REQUEST_FEEDBACK,
             specificBuilds = listOf(
                 SpecificBuild.BuildDistributions,
                 SpecificBuild.Gradleception,
@@ -187,7 +185,8 @@ data class GradleSubproject(val name: String, val unitTests: Boolean = true, val
 interface StageName {
     val stageName: String
     val description: String
-
+    val uuid: String
+        get() = "${VersionedSettingsBranch.fromDslContext().branchName.toCapitalized()}_$id"
     val id: String
         get() = stageName.replace(" ", "").replace("-", "")
 }
@@ -205,6 +204,7 @@ data class Stage(
     val dependsOnSanityCheck: Boolean = false
 ) {
     val id = stageName.id
+    val uuid = stageName.uuid
 }
 
 data class TestCoverage(
@@ -256,7 +256,7 @@ data class TestCoverage(
     }
 
     fun asName(): String =
-        "${testType.name.toCapitalized()} ${testJvmVersion.name.toCapitalized()} ${vendor.name.toCapitalized()} ${os.asName()}${if (withoutDependencies) " without dependencies" else ""}"
+        "${testType.name.toCapitalized()} ${testJvmVersion.name.toCapitalized()} ${vendor.displayName} ${os.asName()}${if (withoutDependencies) " without dependencies" else ""}"
 
     val isQuick: Boolean = withoutDependencies || testType == TestType.quick
     val isPlatform: Boolean = testType == TestType.platform

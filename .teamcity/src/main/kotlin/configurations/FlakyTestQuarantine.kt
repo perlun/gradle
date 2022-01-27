@@ -26,7 +26,7 @@ class FlakyTestQuarantine(model: CIBuildModel, stage: Stage, os: Os) : BaseGradl
         it.stageName in listOf(
             StageNames.QUICK_FEEDBACK_LINUX_ONLY,
             StageNames.QUICK_FEEDBACK,
-            StageNames.READY_FOR_MERGE,
+            StageNames.PULL_REQUEST_FEEDBACK,
             StageNames.READY_FOR_NIGHTLY,
         )
     }.flatMap { it.functionalTests }.filter { it.os == os }

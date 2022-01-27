@@ -1173,4 +1173,45 @@ This can indicate that a dependency has been compromised. Please carefully verif
   - monitor-1.0.jar (org:monitor:1.0) from repository maven
   - monitor-1.0.pom (org:monitor:1.0) from repository maven"""))
     }
+
+    def "fails validation when input validation has failed"() {
+        createMetadataFile {
+            addChecksum("org:foo:1.0", 'sha256', "invalid")
+            addChecksum("org:foo:1.0", 'sha256', "f331cce36f6ce9ea387a2c8719fabaf67dc5a5862227ebaa13368ff84eb69481", "pom", "pom")
+        }
+        javaLibrary()
+
+        given:
+        uncheckedModule("org", "foo")
+        buildFile << """
+            class PrintConfigurations extends DefaultTask {
+                @InputFiles
+                FileCollection classpath;
+
+                @TaskAction
+                void execute() {
+                    println "classpath: " + classpath.files
+                }
+            }
+
+
+            dependencies {
+                implementation "org:foo:1.0"
+            }
+
+            tasks.register("printConfigurations", PrintConfigurations) {
+                classpath = configurations.compileClasspath
+            }
+        """
+
+        when:
+        executer.expectDocumentedDeprecationWarning("Execution optimizations are disabled to ensure correctness. See https://docs.gradle.org/current/userguide/more_about_tasks.html#sec:up_to_date_checks for more details.")
+        fails ":printConfigurations"
+
+        then:
+        errorOutput.contains """
+> Dependency verification failed for configuration ':compileClasspath'
+  One artifact failed verification: foo-1.0.jar (org:foo:1.0) from repository maven
+  This can indicate that a dependency has been compromised. Please carefully verify the checksums."""
+    }
 }
